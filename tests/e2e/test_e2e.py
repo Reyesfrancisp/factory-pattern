@@ -10,14 +10,13 @@ def test_hello_world(page, fastapi_server):
     Test that the homepage displays "Hello World".
 
     This test verifies that when a user navigates to the homepage of the application,
-    the main header (`<h1>`) correctly displays the text "Hello World". This ensures
+    the main header (<h1>) correctly displays the text "Hello World". This ensures
     that the server is running and serving the correct template.
     """
     # Navigate the browser to the homepage URL of the FastAPI application.
     page.goto('http://localhost:8000')
     
     # Use an assertion to check that the text within the first <h1> tag is exactly "Hello World".
-    # If the text does not match, the test will fail.
     assert page.inner_text('h1') == 'Hello World'
 
 @pytest.mark.e2e
@@ -41,8 +40,11 @@ def test_calculator_add(page, fastapi_server):
     # Click the button that has the exact text "Add". This triggers the addition operation.
     page.click('button:text("Add")')
     
-    # Use an assertion to check that the text within the result div (with id 'result') is exactly "Result: 15".
-    # This verifies that the addition operation was performed correctly and the result is displayed as expected.
+    # Wait for the result to be populated in the DOM before asserting.
+    # This prevents the "assert '' == 'Result: 15'" error caused by timing issues.
+    page.wait_for_selector('#result:has-text("Result: 15")')
+    
+    # Use an assertion to check that the text within the result div is exactly "Result: 15".
     assert page.inner_text('#result') == 'Result: 15'
 
 @pytest.mark.e2e
@@ -52,8 +54,7 @@ def test_calculator_divide_by_zero(page, fastapi_server):
 
     This test simulates a user attempting to divide a number by zero using the calculator.
     It fills in the numbers, clicks the "Divide" button, and verifies that the appropriate
-    error message is displayed. This ensures that the application correctly handles invalid
-    operations and provides meaningful feedback to the user.
+    error message is displayed.
     """
     # Navigate the browser to the homepage URL of the FastAPI application.
     page.goto('http://localhost:8000')
@@ -61,13 +62,14 @@ def test_calculator_divide_by_zero(page, fastapi_server):
     # Fill in the first number input field (with id 'a') with the value '10'.
     page.fill('#a', '10')
     
-    # Fill in the second number input field (with id 'b') with the value '0', attempting to divide by zero.
+    # Fill in the second number input field (with id 'b') with the value '0'.
     page.fill('#b', '0')
     
-    # Click the button that has the exact text "Divide". This triggers the division operation.
+    # Click the button that has the exact text "Divide".
     page.click('button:text("Divide")')
     
-    # Use an assertion to check that the text within the result div (with id 'result') is exactly
-    # "Error: Cannot divide by zero!". This verifies that the application handles division by zero
-    # gracefully and displays the correct error message to the user.
+    # Wait for the error message to be populated in the DOM.
+    page.wait_for_selector('#result:has-text("Error: Cannot divide by zero!")')
+    
+    # Verify that the application displays the correct error message.
     assert page.inner_text('#result') == 'Error: Cannot divide by zero!'
