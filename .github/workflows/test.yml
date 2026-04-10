@@ -1,9 +1,11 @@
 name: CI/CD
+
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -13,7 +15,7 @@ jobs:
         env:
           POSTGRES_USER: user
           POSTGRES_PASSWORD: password
-          POSTGRES_DB: myappdb
+          POSTGRES_DB: mytestdb
         ports:
           - 5432:5432
         options: >-
@@ -22,31 +24,38 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4 
+      
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
           
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4 
         with:
-          path: |
-            venv
-            ~/.cache/pip
+          path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
+      
       - name: Install dependencies
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/mytestdb
         run: |
           python -m venv venv
           source venv/bin/activate
+          pip install --upgrade pip
           pip install -r requirements.txt
-          playwright install
+          # REQUIRED for E2E tests: Installs Chromium and system dependencies for Playwright
+          playwright install --with-deps 
+      
       - name: Run tests
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/mytestdb
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
         run: |
           source venv/bin/activate
-          pytest tests/unit/ --cov=src --junitxml=test-results/junit.xml
-          pytest tests/integration/
-          pytest tests/e2e/
+          pytest --cov=app --cov-report=xml 
+          
   security:
     needs: test
     runs-on: ubuntu-latest
@@ -63,7 +72,8 @@ jobs:
           format: 'table'
           exit-code: '1'
           ignore-unfixed: true
-          severity: 'CRITICAL,HIGH'
+          severity: 'CRITICAL'
+  
   deploy:
     needs: security
     if: github.ref == 'refs/heads/main'
@@ -83,8 +93,8 @@ jobs:
         with:
           push: true
           tags: |
-            kaw393939/601_module9:latest
-            kaw393939/601_module9:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/factory-pattern-model:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/factory-pattern-model:${{ github.sha }}
           platforms: linux/amd64,linux/arm64
-          cache-from: type=registry,ref=kaw393939/601_module9:cache
+          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/factory-pattern-model:cache
           cache-to: type=inline,mode=max

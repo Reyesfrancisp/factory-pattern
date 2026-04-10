@@ -21,7 +21,7 @@ from app.schemas.calculation import (
     CalculationBase,
     CalculationCreate,
     CalculationUpdate,
-    CalculationResponse
+    CalculationRead
 )
 
 
@@ -45,28 +45,32 @@ def test_calculation_base_valid_addition():
     """Test CalculationBase with valid addition data."""
     data = {
         "type": "addition",
-        "inputs": [10.5, 3, 2]
+        "a": 10.5,
+        "b": 3.0
     }
     calc = CalculationBase(**data)
     assert calc.type == CalculationType.ADDITION
-    assert calc.inputs == [10.5, 3, 2]
+    assert calc.a == 10.5
+    assert calc.b == 3.0
 
 
 def test_calculation_base_valid_subtraction():
     """Test CalculationBase with valid subtraction data."""
     data = {
         "type": "subtraction",
-        "inputs": [20, 5.5]
+        "a": 20.0,
+        "b": 5.5
     }
     calc = CalculationBase(**data)
     assert calc.type == CalculationType.SUBTRACTION
-    assert calc.inputs == [20, 5.5]
+    assert calc.a == 20.0
+    assert calc.b == 5.5
 
 
 def test_calculation_base_case_insensitive_type():
     """Test that calculation type is case-insensitive."""
     for type_variant in ["Addition", "ADDITION", "AdDiTiOn"]:
-        data = {"type": type_variant, "inputs": [1, 2]}
+        data = {"type": type_variant, "a": 1.0, "b": 2.0}
         calc = CalculationBase(**data)
         assert calc.type == CalculationType.ADDITION
 
@@ -75,7 +79,8 @@ def test_calculation_base_invalid_type():
     """Test that invalid calculation type raises ValidationError."""
     data = {
         "type": "modulus",  # Invalid type
-        "inputs": [10, 3]
+        "a": 10.0,
+        "b": 3.0
     }
     with pytest.raises(ValidationError) as exc_info:
         CalculationBase(**data)
@@ -84,44 +89,17 @@ def test_calculation_base_invalid_type():
     assert any("Type must be one of" in str(err) for err in errors)
 
 
-def test_calculation_base_inputs_not_list():
-    """Test that non-list inputs raise ValidationError."""
+def test_calculation_base_missing_fields():
+    """Test that missing required fields raises ValidationError."""
     data = {
         "type": "addition",
-        "inputs": "not a list"
+        "a": 5.0
+        # Missing b
     }
     with pytest.raises(ValidationError) as exc_info:
         CalculationBase(**data)
     
-    errors = exc_info.value.errors()
-    assert any("Input should be a valid list" in str(err) for err in errors)
-
-
-def test_calculation_base_insufficient_inputs():
-    """Test that fewer than 2 inputs raises ValidationError."""
-    data = {
-        "type": "addition",
-        "inputs": [5]  # Only one input
-    }
-    with pytest.raises(ValidationError) as exc_info:
-        CalculationBase(**data)
-    
-    # Validation error can be from min_length constraint or model validator
     assert len(exc_info.value.errors()) > 0
-
-
-def test_calculation_base_empty_inputs():
-    """Test that empty inputs list raises ValidationError."""
-    data = {
-        "type": "multiplication",
-        "inputs": []
-    }
-    with pytest.raises(ValidationError) as exc_info:
-        CalculationBase(**data)
-    
-    errors = exc_info.value.errors()
-    # Should fail on min_length=2
-    assert len(errors) > 0
 
 
 def test_calculation_base_division_by_zero():
@@ -134,20 +112,8 @@ def test_calculation_base_division_by_zero():
     """
     data = {
         "type": "division",
-        "inputs": [100, 0]  # Division by zero
-    }
-    with pytest.raises(ValidationError) as exc_info:
-        CalculationBase(**data)
-    
-    errors = exc_info.value.errors()
-    assert any("Cannot divide by zero" in str(err) for err in errors)
-
-
-def test_calculation_base_division_by_zero_in_middle():
-    """Test that zero in any denominator position is caught."""
-    data = {
-        "type": "division",
-        "inputs": [100, 5, 0, 2]  # Zero in middle
+        "a": 100.0,
+        "b": 0.0  # Division by zero
     }
     with pytest.raises(ValidationError) as exc_info:
         CalculationBase(**data)
@@ -160,10 +126,11 @@ def test_calculation_base_division_zero_numerator_ok():
     """Test that zero as the first input (numerator) is allowed."""
     data = {
         "type": "division",
-        "inputs": [0, 5, 2]  # Zero numerator is valid
+        "a": 0.0,  # Zero numerator is valid
+        "b": 5.0
     }
     calc = CalculationBase(**data)
-    assert calc.inputs[0] == 0
+    assert calc.a == 0.0
 
 
 # ============================================================================
@@ -175,12 +142,14 @@ def test_calculation_create_valid():
     user_id = uuid4()
     data = {
         "type": "multiplication",
-        "inputs": [2, 3, 4],
+        "a": 2.0,
+        "b": 3.0,
         "user_id": str(user_id)
     }
     calc = CalculationCreate(**data)
     assert calc.type == CalculationType.MULTIPLICATION
-    assert calc.inputs == [2, 3, 4]
+    assert calc.a == 2.0
+    assert calc.b == 3.0
     assert calc.user_id == user_id
 
 
@@ -188,7 +157,8 @@ def test_calculation_create_missing_user_id():
     """Test that CalculationCreate requires user_id."""
     data = {
         "type": "addition",
-        "inputs": [1, 2]
+        "a": 1.0,
+        "b": 2.0
         # Missing user_id
     }
     with pytest.raises(ValidationError) as exc_info:
@@ -202,7 +172,8 @@ def test_calculation_create_invalid_user_id():
     """Test that invalid UUID format raises ValidationError."""
     data = {
         "type": "subtraction",
-        "inputs": [10, 5],
+        "a": 10.0,
+        "b": 5.0,
         "user_id": "not-a-valid-uuid"
     }
     with pytest.raises(ValidationError):
@@ -216,68 +187,61 @@ def test_calculation_create_invalid_user_id():
 def test_calculation_update_valid():
     """Test CalculationUpdate with valid data."""
     data = {
-        "inputs": [42, 7]
+        "a": 42.0,
+        "b": 7.0
     }
     calc = CalculationUpdate(**data)
-    assert calc.inputs == [42, 7]
+    assert calc.a == 42.0
+    assert calc.b == 7.0
 
 
 def test_calculation_update_all_fields_optional():
     """Test that CalculationUpdate can be empty (all fields optional)."""
     data = {}
     calc = CalculationUpdate(**data)
-    assert calc.inputs is None
-
-
-def test_calculation_update_insufficient_inputs():
-    """Test that CalculationUpdate validates minimum inputs."""
-    data = {
-        "inputs": [5]  # Only one input
-    }
-    with pytest.raises(ValidationError) as exc_info:
-        CalculationUpdate(**data)
-    
-    # Validation error can be from min_length constraint or model validator
-    assert len(exc_info.value.errors()) > 0
+    assert calc.a is None
+    assert calc.b is None
 
 
 # ============================================================================
-# Tests for CalculationResponse Schema
+# Tests for CalculationRead Schema
 # ============================================================================
 
-def test_calculation_response_valid():
-    """Test CalculationResponse with all required fields."""
+def test_calculation_read_valid():
+    """Test CalculationRead with all required fields."""
     from datetime import datetime
     
     data = {
         "id": str(uuid4()),
         "user_id": str(uuid4()),
         "type": "addition",
-        "inputs": [10, 5],
+        "a": 10.0,
+        "b": 5.0,
         "result": 15.0,
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow()
     }
-    calc = CalculationResponse(**data)
+    calc = CalculationRead(**data)
     assert calc.result == 15.0
     assert calc.type == CalculationType.ADDITION
 
 
-def test_calculation_response_missing_result():
-    """Test that CalculationResponse requires result field."""
+def test_calculation_read_missing_result():
+    """Test that CalculationRead requires result field."""
     from datetime import datetime
     
     data = {
         "id": str(uuid4()),
         "user_id": str(uuid4()),
         "type": "multiplication",
-        "inputs": [2, 3],
+        "a": 2.0,
+        "b": 3.0,
         # Missing result
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow()
     }
     with pytest.raises(ValidationError) as exc_info:
-        CalculationResponse(**data)
+        CalculationRead(**data)
     
     errors = exc_info.value.errors()
     assert any("result" in str(err) for err in errors)
@@ -295,11 +259,10 @@ def test_multiple_calculations_with_different_types():
     user_id = uuid4()
     
     calcs_data = [
-        {"type": "addition", "inputs": [1, 2, 3], "user_id": str(user_id)},
-        {"type": "subtraction", "inputs": [10, 3], "user_id": str(user_id)},
-        {"type": "multiplication", "inputs": [2, 3, 4],
-         "user_id": str(user_id)},
-        {"type": "division", "inputs": [100, 5], "user_id": str(user_id)},
+        {"type": "addition", "a": 1.0, "b": 2.0, "user_id": str(user_id)},
+        {"type": "subtraction", "a": 10.0, "b": 3.0, "user_id": str(user_id)},
+        {"type": "multiplication", "a": 2.0, "b": 3.0, "user_id": str(user_id)},
+        {"type": "division", "a": 100.0, "b": 5.0, "user_id": str(user_id)},
     ]
     
     calcs = [CalculationCreate(**data) for data in calcs_data]
@@ -315,27 +278,33 @@ def test_schema_with_large_numbers():
     """Test that schemas handle large numbers correctly."""
     data = {
         "type": "multiplication",
-        "inputs": [1e10, 1e10, 1e10]
+        "a": 1e10,
+        "b": 1e10
     }
     calc = CalculationBase(**data)
-    assert all(isinstance(x, float) for x in calc.inputs)
+    assert isinstance(calc.a, float)
+    assert isinstance(calc.b, float)
 
 
 def test_schema_with_negative_numbers():
     """Test that schemas accept negative numbers."""
     data = {
         "type": "addition",
-        "inputs": [-5, -10, 3.5]
+        "a": -5.0,
+        "b": -10.0
     }
     calc = CalculationBase(**data)
-    assert calc.inputs == [-5, -10, 3.5]
+    assert calc.a == -5.0
+    assert calc.b == -10.0
 
 
 def test_schema_with_mixed_int_and_float():
     """Test that schemas accept mixed integers and floats."""
     data = {
         "type": "subtraction",
-        "inputs": [100, 23.5, 10, 6.7]
+        "a": 100,
+        "b": 23.5
     }
     calc = CalculationBase(**data)
-    assert len(calc.inputs) == 4
+    assert calc.a == 100.0
+    assert calc.b == 23.5
