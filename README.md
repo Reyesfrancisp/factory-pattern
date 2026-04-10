@@ -1,264 +1,89 @@
-# 📦 Project Setup
+# Factory Pattern Model - Calculator API
+
+## Project Overview
+This project is a high-performance, containerized Calculator API built with **FastAPI** and **PostgreSQL**. It demonstrates advanced software engineering principles including the **Polymorphic Factory Pattern**, **SQLAlchemy ORM** for data persistence, and **Pydantic** for robust schema validation.
+
+This repository fulfills the Module 11 assignment for **IS 601 at NJIT**, focusing on refactoring legacy code into a scalable, production-ready architecture with a comprehensive CI/CD pipeline.
+
+### Refactoring & Improvements
+* **Polymorphic Model**: Refactored the calculation data model to use dedicated `a` and `b` float columns, replacing generic input fields.
+* **Factory Pattern**: Implemented a factory for calculator operations to ensure a decoupled and extensible architecture.
+* **PostgreSQL Stability**: Pinned the database to **PostgreSQL 16** to ensure cross-platform compatibility and avoid data directory conflicts found in newer versions.
+* **Security & Best Practices**: Configured the Docker environment to run as a non-root `appuser`.
 
 ---
 
-# 🧩 1. Install Homebrew (Mac Only)
-
-> Skip this step if you're on Windows.
-
-Homebrew is a package manager for macOS.  
-You’ll use it to easily install Git, Python, Docker, etc.
-
-**Install Homebrew:**
-
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-```
-
-**Verify Homebrew:**
-
-```bash
-brew --version
-```
-
-If you see a version number, you're good to go.
+## Technical Stack
+* **Backend**: FastAPI (Python 3.10)
+* **Database**: PostgreSQL 16
+* **ORM**: SQLAlchemy
+* **Testing**: Pytest & Playwright (E2E)
+* **DevOps**: Docker, GitHub Actions, Docker Hub, Trivy (Security Scanning)
 
 ---
 
-# 🧩 2. Install and Configure Git
+## Getting Started
 
-## Install Git
+### Prerequisites
+* Docker Desktop installed.
+* Git.
 
-- **MacOS (using Homebrew)**
+### Installation & Setup
+1.  **Clone the repository:**
+    ```bash
+    git clone [https://github.com/Reyesfrancisp/factory-pattern.git](https://github.com/Reyesfrancisp/factory-pattern.git)
+    cd factory-pattern
+    ```
 
-```bash
-brew install git
-```
+2.  **Environment Configuration:**
+    Ensure a `.env` file exists in the root directory with the following variables:
+    ```env
+    DATABASE_URL=postgresql://postgres:postgres@db:5432/fastapi_db
+    POSTGRES_USER=postgres
+    POSTGRES_PASSWORD=postgres
+    POSTGRES_DB=fastapi_db
+    ```
 
-- **Windows**
-
-Download and install [Git for Windows](https://git-scm.com/download/win).  
-Accept the default options during installation.
-
-**Verify Git:**
-
-```bash
-git --version
-```
-
----
-
-## Configure Git Globals
-
-Set your name and email so Git tracks your commits properly:
-
-```bash
-git config --global user.name "Your Name"
-git config --global user.email "your_email@example.com"
-```
-
-Confirm the settings:
-
-```bash
-git config --list
-```
+3.  **Launch the Environment:**
+    Build and start the containers in detached mode:
+    ```bash
+    docker-compose up -d --build
+    ```
 
 ---
 
-## Generate SSH Keys and Connect to GitHub
+## Running Tests
 
-> Only do this once per machine.
+To maintain environment parity, tests should be executed inside the running `web` container.
 
-1. Generate a new SSH key:
-
+### 1. Install E2E Browser Binaries
+Because the container runs as a restricted user, Playwright browsers must be installed as root once the container is up:
 ```bash
-ssh-keygen -t ed25519 -C "your_email@example.com"
+docker-compose exec --user root web playwright install --with-deps chromium
 ```
 
-(Press Enter at all prompts.)
-
-2. Start the SSH agent:
-
+### 2. Run the Test Suite
+Execute unit, integration, and E2E tests with coverage reporting:
 ```bash
-eval "$(ssh-agent -s)"
+docker-compose exec web pytest --cov=app --cov-report=term-missing
 ```
 
-3. Add the SSH private key to the agent:
-
-```bash
-ssh-add ~/.ssh/id_ed25519
-```
-
-4. Copy your SSH public key:
-
-- **Mac/Linux:**
-
-```bash
-cat ~/.ssh/id_ed25519.pub | pbcopy
-```
-
-- **Windows (Git Bash):**
-
-```bash
-cat ~/.ssh/id_ed25519.pub | clip
-```
-
-5. Add the key to your GitHub account:
-   - Go to [GitHub SSH Settings](https://github.com/settings/keys)
-   - Click **New SSH Key**, paste the key, save.
-
-6. Test the connection:
-
-```bash
-ssh -T git@github.com
-```
-
-You should see a success message.
+**Note:** The project maintains a high coverage standard (**95%+**), ensuring that the core logic, polymorphic relationships, and API endpoints are thoroughly verified.
 
 ---
 
-# 🧩 3. Clone the Repository
+## CI/CD Pipeline
+The automated pipeline is configured via GitHub Actions (`.github/workflows/test.yml`):
 
-Now you can safely clone the course project:
+* **Test Suite**: Validates all code changes against a PostgreSQL service container.
+* **Security Audit**: Scans the built image for vulnerabilities using **Trivy**.
+* **Automated Deployment**: Builds and pushes the finalized image to Docker Hub on successful `main` branch updates.
 
-```bash
-git clone <repository-url>
-cd <repository-directory>
-```
-
----
-
-# 🛠️ 4. Install Python 3.10+
-
-## Install Python
-
-- **MacOS (Homebrew)**
-
-```bash
-brew install python
-```
-
-- **Windows**
-
-Download and install [Python for Windows](https://www.python.org/downloads/).  
-✅ Make sure you **check the box** `Add Python to PATH` during setup.
-
-**Verify Python:**
-
-```bash
-python3 --version
-```
-or
-```bash
-python --version
-```
+**Docker Hub Repository:** [reyesfrancisp/factory-pattern-model](https://hub.docker.com/r/reyesfrancisp/factory-pattern-model)
 
 ---
 
-## Create and Activate a Virtual Environment
-
-(Optional but recommended)
-
-```bash
-python3 -m venv venv
-source venv/bin/activate   # Mac/Linux
-venv\Scripts\activate.bat  # Windows
-```
-
-### Install Required Packages
-
-```bash
-pip install -r requirements.txt
-```
-
----
-
-# 🐳 5. (Optional) Docker Setup
-
-> Skip if Docker isn't used in this module.
-
-## Install Docker
-
-- [Install Docker Desktop for Mac](https://www.docker.com/products/docker-desktop/)
-- [Install Docker Desktop for Windows](https://www.docker.com/products/docker-desktop/)
-
-## Build Docker Image
-
-```bash
-docker build -t <image-name> .
-```
-
-## Run Docker Container
-
-```bash
-docker run -it --rm <image-name>
-```
-
----
-
-# 🚀 6. Running the Project
-
-- **Without Docker**:
-
-```bash
-python main.py
-```
-
-(or update this if the main script is different.)
-
-- **With Docker**:
-
-```bash
-docker run -it --rm <image-name>
-```
-
----
-
-# 📝 7. Submission Instructions
-
-After finishing your work:
-
-```bash
-git add .
-git commit -m "Complete Module X"
-git push origin main
-```
-
-Then submit the GitHub repository link as instructed.
-
----
-
-# 🔥 Useful Commands Cheat Sheet
-
-| Action                         | Command                                          |
-| ------------------------------- | ------------------------------------------------ |
-| Install Homebrew (Mac)          | `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"` |
-| Install Git                     | `brew install git` or Git for Windows installer |
-| Configure Git Global Username  | `git config --global user.name "Your Name"`      |
-| Configure Git Global Email     | `git config --global user.email "you@example.com"` |
-| Clone Repository                | `git clone <repo-url>`                          |
-| Create Virtual Environment     | `python3 -m venv venv`                           |
-| Activate Virtual Environment   | `source venv/bin/activate` / `venv\Scripts\activate.bat` |
-| Install Python Packages        | `pip install -r requirements.txt`               |
-| Build Docker Image              | `docker build -t <image-name> .`                |
-| Run Docker Container            | `docker run -it --rm <image-name>`               |
-| Push Code to GitHub             | `git add . && git commit -m "message" && git push` |
-
----
-
-# 📋 Notes
-
-- Install **Homebrew** first on Mac.
-- Install and configure **Git** and **SSH** before cloning.
-- Use **Python 3.10+** and **virtual environments** for Python projects.
-- **Docker** is optional depending on the project.
-
----
-
-# 📎 Quick Links
-
-- [Homebrew](https://brew.sh/)
-- [Git Downloads](https://git-scm.com/downloads)
-- [Python Downloads](https://www.python.org/downloads/)
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-- [GitHub SSH Setup Guide](https://docs.github.com/en/authentication/connecting-to-github-with-ssh)
+## Author
+**Francis Reyes**
+* **NJIT UCID**: fdr7
+* **Course**: IS 601 - Web Systems Development
