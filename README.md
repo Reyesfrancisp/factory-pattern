@@ -79,7 +79,7 @@ The automated pipeline is configured via GitHub Actions (`.github/workflows/test
 * **Security Audit**: Scans the built image for vulnerabilities using **Trivy**.
 * **Automated Deployment**: Builds and pushes the finalized image to Docker Hub on successful `main` branch updates.
 
-**Docker Hub Repository:** [reyesfrancisp/factory-pattern-model](https://hub.docker.com/r/reyesfrancisp/factory-pattern-model)
+**Docker Hub Repository:** [reyesfrancisp/factory-pattern-model](https://hub.docker.com/repository/docker/reyesfrancisp/factory-pattern-model/general)
 
 ---
 
